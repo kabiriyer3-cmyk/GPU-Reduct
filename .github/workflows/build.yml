@@ -1,0 +1,45 @@
+name: Build
+
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']          # push a tag like v0.2.0 to publish a GitHub Release
+  pull_request:
+  workflow_dispatch:      # "Run workflow" button in the Actions tab
+
+permissions:
+  contents: write         # needed to create releases
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Publish single-file exe
+        shell: pwsh
+        run: |
+          # Tag v1.2.3 -> version 1.2.3; other builds keep the csproj version
+          $versionArg = if ($env:GITHUB_REF -like 'refs/tags/v*') { "-p:Version=$($env:GITHUB_REF_NAME.TrimStart('v'))" } else { "" }
+          dotnet publish GpuReduct.csproj -c Release -r win-x64 --self-contained `
+            -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:DebugType=None $versionArg -o publish
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GpuReduct-win-x64
+          path: publish/GpuReduct.exe
+          if-no-files-found: error
+
+      - name: Create release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: publish/GpuReduct.exe
+          generate_release_notes: true
