@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Interop;
 
 namespace GpuReduct;
@@ -19,6 +20,15 @@ public partial class MainWindow : Window
     private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
 
     private void Close_Click(object sender, RoutedEventArgs e) => Hide();
+
+    // Close the GPU dropdown after a pick (also when re-picking the current GPU).
+    private void AdapterList_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e) =>
+        AdapterToggle.IsChecked = false;
+
+    private void AdapterList_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key is Key.Enter or Key.Escape) AdapterToggle.IsChecked = false;
+    }
 
     protected override void OnClosing(CancelEventArgs e)
     {

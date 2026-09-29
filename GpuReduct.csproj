@@ -11,13 +11,21 @@
     <AssemblyName>GpuReduct</AssemblyName>
     <RootNamespace>GpuReduct</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>0.1.0</Version>
+    <!-- Icon of the .exe in Explorer / taskbar -->
+    <ApplicationIcon>Assets\GpuReduct.ico</ApplicationIcon>
+    <Version>0.2.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
     <!-- WinForms adds these global usings; they clash with WPF types (Application, MessageBox, Color...) -->
     <Using Remove="System.Windows.Forms" />
     <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Embedded into the exe, loaded via pack://application:,,,/Assets/... -->
+    <Resource Include="Assets\GpuReduct.ico" />
+    <Resource Include="Assets\logo.png" />
   </ItemGroup>
 
   <ItemGroup>

@@ -28,7 +28,6 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         CleanCommand = new AsyncRelayCommand(_ => CleanAsync(), _ => !IsBusy && _last != null);
         ResetDriverCommand = new AsyncRelayCommand(_ => ResetDriverAsync(), _ => !IsBusy);
         KillProcessCommand = new RelayCommand(KillProcess);
-        NextAdapterCommand = new RelayCommand(_ => NextAdapter());
 
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _timer.Tick += async (_, _) => await RefreshAsync();
@@ -43,28 +42,29 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public ICommand CleanCommand { get; }
     public ICommand ResetDriverCommand { get; }
     public ICommand KillProcessCommand { get; }
-    public ICommand NextAdapterCommand { get; }
 
     /// <summary>Injected by the view so the VM stays UI-agnostic.</summary>
     public Func<string, bool> Confirm { get; set; } = _ => true;
 
-    // ───── Adapter ─────
+    // ───── Adapter (bound TwoWay to the GPU picker list) ─────
     private GpuAdapter? _selectedAdapter;
     public GpuAdapter? SelectedAdapter
     {
         get => _selectedAdapter;
         set
         {
+            if (value is null) return; // ignore transient nulls from the list
             if (!SetProperty(ref _selectedAdapter, value)) return;
             Array.Clear(_history);
+            History = (double[])_history.Clone();
             Processes.Clear();
+            _last = null;
             OnPropertyChanged(nameof(AdapterName));
             _ = RefreshAsync();
         }
     }
 
     public string AdapterName => SelectedAdapter?.Name ?? "No GPU detected";
-    public bool HasMultipleAdapters => Adapters.Count > 1;
 
     // ───── Display state ─────
     private string _usedText = "—";
@@ -124,7 +124,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         try
         {
             var snapshot = await Task.Run(() => _monitor.Sample(adapter.LuidKey));
-            if (!Equals(adapter, SelectedAdapter)) return; // user switched GPU mid-sample
+            if (!ReferenceEquals(adapter, SelectedAdapter)) return; // user switched GPU mid-sample
             Apply(adapter, snapshot);
             await MaybeAutoCleanAsync();
         }
@@ -158,7 +158,7 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         History = (double[])_history.Clone(); // new instance -> Sparkline re-renders
 
         SyncProcesses(s.Processes.Take(TopProcessCount).ToList(), adapter.DedicatedBytes);
-        OnPropertyChanged(nameof(TrayText));
+        OnPropertyChanged(nameof(TrayText)); // also drives the live tray icon
     }
 
     /// <summary>Updates rows in place (no flicker, hover state survives).</summary>
@@ -256,13 +256,6 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         StatusText = GpuCleaner.KillProcess(pid)
             ? $"Ended {name} · {DateTime.Now:t}"
             : $"Couldn't end {name} (access denied?)";
-    }
-
-    private void NextAdapter()
-    {
-        if (Adapters.Count < 2 || SelectedAdapter is null) return;
-        int index = Adapters.IndexOf(SelectedAdapter);
-        SelectedAdapter = Adapters[(index + 1) % Adapters.Count];
     }
 
     private async Task MaybeAutoCleanAsync()

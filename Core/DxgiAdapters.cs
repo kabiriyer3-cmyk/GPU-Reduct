@@ -5,6 +5,9 @@ namespace GpuReduct.Core;
 /// <summary>Physical GPU as reported by DXGI.</summary>
 public sealed record GpuAdapter(string Name, uint VendorId, ulong DedicatedBytes, ulong SharedBytes, string LuidKey)
 {
+    /// <summary>Total dedicated VRAM, formatted for the GPU picker.</summary>
+    public string VramText => ByteSize.Format(DedicatedBytes);
+
     public override string ToString() => Name;
 }
 

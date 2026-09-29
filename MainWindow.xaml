@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:GpuReduct.Controls"
         Title="GPU Reduct" Width="820" Height="560"
+        Icon="/Assets/GpuReduct.ico"
         WindowStyle="None" ResizeMode="CanMinimize" WindowStartupLocation="CenterScreen"
         Background="{StaticResource BgBrush}" Foreground="{StaticResource TextPrimaryBrush}"
         FontFamily="{StaticResource UiFont}" FontSize="13"
@@ -27,30 +28,71 @@
         <Border BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
             <Grid Margin="16,0,10,0">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Width="20" Height="20" CornerRadius="6">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Color="#FF8B93F5" Offset="0"/>
-                                <GradientStop Color="#FF5E6AD2" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Border.Background>
-                        <TextBlock Text="G" FontSize="11" FontWeight="Bold" Foreground="White"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
+                    <Image Source="/Assets/logo.png" Width="20" Height="20"
+                           RenderOptions.BitmapScalingMode="HighQuality"/>
                     <TextBlock Text="GPU Reduct" Margin="10,0,0,0" FontWeight="SemiBold" VerticalAlignment="Center"/>
                     <TextBlock Text="/" Margin="12,0" Foreground="{StaticResource TextTertiaryBrush}" VerticalAlignment="Center"/>
 
-                    <!-- Adapter pill: click to cycle GPUs on hybrid systems -->
-                    <Button Style="{StaticResource PillButton}" Command="{Binding NextAdapterCommand}"
-                            ToolTip="Switch GPU" WindowChrome.IsHitTestVisibleInChrome="True">
-                        <StackPanel Orientation="Horizontal">
-                            <Ellipse Width="6" Height="6" Fill="{StaticResource SuccessBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <TextBlock Text="{Binding AdapterName}" VerticalAlignment="Center"/>
-                            <TextBlock Text="&#xE70D;" FontFamily="{StaticResource IconFont}" FontSize="8" Margin="8,1,0,0"
-                                       VerticalAlignment="Center" Foreground="{StaticResource TextTertiaryBrush}"
-                                       Visibility="{Binding HasMultipleAdapters, Converter={StaticResource BoolToVis}}"/>
-                        </StackPanel>
-                    </Button>
+                    <!-- GPU picker: pill + dropdown list -->
+                    <Grid WindowChrome.IsHitTestVisibleInChrome="True">
+                        <ToggleButton x:Name="AdapterToggle" ToolTip="Select GPU">
+                            <ToggleButton.Style>
+                                <Style TargetType="ToggleButton" BasedOn="{StaticResource PillToggle}">
+                                    <Style.Triggers>
+                                        <!-- While open, a click on the pill should only close the popup (not reopen it) -->
+                                        <DataTrigger Binding="{Binding IsOpen, ElementName=AdapterPopup}" Value="True">
+                                            <Setter Property="IsHitTestVisible" Value="False"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ToggleButton.Style>
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Width="6" Height="6" Fill="{StaticResource SuccessBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="{Binding AdapterName}" MaxWidth="280" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                                <TextBlock Text="&#xE70D;" FontFamily="{StaticResource IconFont}" FontSize="8" Margin="8,1,0,0"
+                                           VerticalAlignment="Center" Foreground="{StaticResource TextTertiaryBrush}"/>
+                            </StackPanel>
+                        </ToggleButton>
+
+                        <Popup x:Name="AdapterPopup" PlacementTarget="{Binding ElementName=AdapterToggle}"
+                               Placement="Bottom" VerticalOffset="6" StaysOpen="False"
+                               AllowsTransparency="True" PopupAnimation="Fade"
+                               IsOpen="{Binding IsChecked, ElementName=AdapterToggle, Mode=TwoWay}">
+                            <Border Style="{StaticResource MenuPanel}" MinWidth="260">
+                                <StackPanel>
+                                    <TextBlock Text="Graphics adapters" Style="{StaticResource Caption}" Margin="10,6,10,6"/>
+                                    <ListBox Style="{StaticResource MenuList}" ItemContainerStyle="{StaticResource MenuListItem}"
+                                             ItemsSource="{Binding Adapters}" SelectedItem="{Binding SelectedAdapter, Mode=TwoWay}"
+                                             PreviewMouseLeftButtonUp="AdapterList_PreviewMouseLeftButtonUp"
+                                             KeyDown="AdapterList_KeyDown">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding Name}" FontSize="13"/>
+                                                        <TextBlock Text="{Binding VramText, StringFormat='{}{0} dedicated'}"
+                                                                   Style="{StaticResource Caption}" Margin="0,2,0,0"/>
+                                                    </StackPanel>
+                                                    <TextBlock x:Name="Check" Grid.Column="1" Text="&#xE73E;" FontSize="12"
+                                                               FontFamily="{StaticResource IconFont}" Foreground="{StaticResource AccentHoverBrush}"
+                                                               VerticalAlignment="Center" Margin="16,0,2,0" Visibility="Hidden"/>
+                                                </Grid>
+                                                <DataTemplate.Triggers>
+                                                    <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                                                        <Setter TargetName="Check" Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </DataTemplate.Triggers>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </StackPanel>
+                            </Border>
+                        </Popup>
+                    </Grid>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
